@@ -278,7 +278,25 @@
                     ValueFromRemainingArguments=$false )]
         [Alias( 'Connection', 'Conn' )]
         [System.Data.SQLite.SQLiteConnection]
-        $SQLiteConnection
+        $SQLiteConnection,
+		
+		[Parameter( ParameterSetName='Src-Que',
+                    Position=8,
+					Mandatory=$false,
+					ValueFromPipeline=$false,
+					ValueFromPipelineByPropertyName=$false,
+					ValueFromRemainingArguments=$false,
+                    HelpMessage='Password for SQLite Data Source' )]
+        [Parameter( ParameterSetName='Src-Fil',
+                    Position=8,
+					Mandatory=$false,
+					ValueFromPipeline=$false,
+					ValueFromPipelineByPropertyName=$false,
+					ValueFromRemainingArguments=$false,
+                    HelpMessage='Password for SQLite Data Source' )]
+		[Alias( 'Pass' )]
+		[string]
+		$Password
     ) 
 
     Begin
@@ -403,14 +421,26 @@
                 }
                 else
                 {
-                    Write-Verbose "Creating andn querying Data Source '$Database'"
+                    Write-Verbose "Creating and querying Data Source '$Database'"
+					$newDB = $true
                 }
 
-                $ConnectionString = "Data Source={0}" -f $Database
-
+                $ConnectionString = "Data Source={0};" -f $Database
+				if ($Password) {
+					$ConnectionString = "{0}Version=3;" -f $ConnectionString
+					if (!$newDB) {
+						$ConnectionString = "{0}Password='{1}';" -f $ConnectionString, $Password.Replace("'", "&#39;")
+					}
+				}
+				
                 $conn = New-Object System.Data.SQLite.SQLiteConnection -ArgumentList $ConnectionString
                 $conn.ParseViaFramework = $true #Allow UNC paths, thanks to Ray Alex!
                 Write-Debug "ConnectionString $ConnectionString"
+				
+				# Password protect the new database
+				if ($newDB -and $Password) {
+					$conn.SetPassword($Password.Replace("'", "&#39;"));
+				}
 
                 Try
                 {
